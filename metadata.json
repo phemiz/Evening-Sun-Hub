@@ -1,0 +1,9 @@
+{
+  "name": "Evening Sun Hub",
+  "description": "A unified lifestyle platform for Eatery, Salon, Club, and Marine services.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
