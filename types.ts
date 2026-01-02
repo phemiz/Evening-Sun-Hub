@@ -29,7 +29,7 @@ export interface Staff {
   id: string;
   name: string;
   phone: string;
-  role: 'KITCHEN' | 'SALON' | 'MARINE' | 'CLUB' | 'SECURITY' | 'FINANCE_MGMT' | 'ADMIN_MGMT' | 'OPERATIONS_MGMT' | 'EXECUTIVE';
+  role: 'KITCHEN' | 'SALON' | 'MARINE' | 'CLUB' | 'SECURITY' | 'FINANCE_HEAD' | 'ADMIN_HEAD' | 'OPERATIONS_HEAD' | 'EXECUTIVE';
   rating: number;
   imageUrl?: string;
   password?: string;
@@ -72,7 +72,7 @@ export interface CartItem extends Product {
 export interface User {
   name: string;
   phone: string;
-  role: 'CUSTOMER' | 'STAFF' | 'ADMIN';
+  role: 'CUSTOMER' | 'STAFF' | 'ADMIN' | 'FINANCE' | 'OPERATIONS' | 'SUPER_ADMIN';
   password?: string;
   staffRole?: Staff['role'];
   loyaltyPoints?: number;

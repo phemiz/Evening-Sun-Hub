@@ -17,6 +17,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { Product, ServiceItem, ServiceType, Staff, Vessel, User, Voucher, Transaction, ClubEvent } from '../types';
 import { MANAGEMENT_KPIS } from '../constants';
+import { FileText, Printer, FileType, FileCode, Download, Send, Key } from 'lucide-react';
 
 export const Admin = () => {
   const navigate = useNavigate();
@@ -87,7 +88,9 @@ export const Admin = () => {
   });
 
   const [topUpAmount, setTopUpAmount] = useState('');
+  const [topUpAmount, setTopUpAmount] = useState('');
   const [isTopUpMode, setIsTopUpMode] = useState(false);
+  const [broadcastMessage, setBroadcastMessage] = useState("");
 
   // File Input Refs
   const productFileRef = useRef<HTMLInputElement>(null);
@@ -259,6 +262,7 @@ export const Admin = () => {
       name: formData.get('staffName') as string,
       phone: formData.get('staffPhone') as string,
       role: formData.get('staffRole') as Staff['role'],
+      password: formData.get('staffPassword') as string,
       status: formData.get('staffStatus') as Staff['status'],
       imageUrl: editingStaff?.imageUrl
     };
@@ -402,19 +406,104 @@ export const Admin = () => {
 
     setTopUpAmount('');
     setIsTopUpMode(false);
+    setTopUpAmount('');
+    setIsTopUpMode(false);
   };
 
-  const navItems = [
-    { id: 'SETUP', label: 'Setup', icon: Settings2 },
-    { id: 'MARKET', label: 'Analytics', icon: BarChart3 },
-    { id: 'FLEET', label: 'Boats', icon: Ship },
-    { id: 'EVENTS', label: 'Events', icon: CalendarIcon },
-    { id: 'MEMBERS', label: 'Members', icon: Users },
-    { id: 'WORKERS', label: 'Workers', icon: UserCog },
-    { id: 'ITEMS', label: 'Menu List', icon: Package },
-    { id: 'VOUCHERS', label: 'Vouchers', icon: Ticket },
-    { id: 'PROTOCOL', label: 'Guidelines', icon: BookOpen }
-  ];
+  const handleBroadcast = () => {
+    if (!broadcastMessage.trim()) return;
+
+    // Simulate sending to selected customers (or all if none selected, logic can be refined)
+    // For now, assuming broadcast to all filtered customers
+    setIsSyncing(true);
+    setTimeout(() => {
+      setIsSyncing(false);
+      addNotification({
+        title: "Broadcast Dispatched",
+        message: `Message queued for ${customers.length} members via WhatsApp API.`,
+        type: "SUCCESS"
+      });
+      setBroadcastMessage("");
+    }, 2000);
+  };
+
+  const handleExport = (reportType: string, format: string) => {
+    addNotification({
+      title: "Generating Report",
+      message: `Exporting ${reportType} as ${format}... Download will start shortly.`,
+      type: "INFO"
+    });
+    // Simulate generation delay
+    setTimeout(() => {
+      addNotification({
+        title: "Export Ready",
+        message: `${reportType} report (${format}) has been generated successfully.`,
+        type: "SUCCESS"
+      });
+    }, 1500);
+  };
+
+  const handlePrintReport = (reportType: string) => {
+    let content = `<html><head><title>${reportType} Report</title><style>
+      body { font-family: sans-serif; padding: 20px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      th { background-color: #f2f2f2; }
+      h1 { color: #333; }
+      .header { margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+    </style></head><body>
+      <div class="header">
+        <h1>Evening Sun Hub - ${reportType}</h1>
+        <p>Generated on: ${new Date().toLocaleString()}</p>
+      </div>`;
+
+    if (reportType === 'Member Registry') {
+      content += `<table><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Wallet Balance</th><th>Points</th></tr></thead><tbody>
+        ${customers.map(c => `<tr><td>${c.name}</td><td>${c.phone}</td><td>${c.role}</td><td>₦${c.walletBalance?.toLocaleString()}</td><td>${c.loyaltyPoints}</td></tr>`).join('')}
+      </tbody></table>`;
+    } else if (reportType === 'Human Manifest') {
+      content += `<table><thead><tr><th>Name</th><th>Phone</th><th>Role</th><th>Status</th></tr></thead><tbody>
+        ${staff.map(s => `<tr><td>${s.name}</td><td>${s.phone}</td><td>${s.role}</td><td>${s.status}</td></tr>`).join('')}
+      </tbody></table>`;
+    } else if (reportType === 'Catalogue Data') {
+      content += `<table><thead><tr><th>Item</th><th>Category</th><th>Price</th></tr></thead><tbody>
+        ${products.map(p => `<tr><td>${p.name}</td><td>${p.category}</td><td>₦${p.price.toLocaleString()}</td></tr>`).join('')}
+      </tbody></table>`;
+    } else {
+      content += `<p>No specific data format defined for this report type yet.</p>`;
+    }
+
+    content += `<script>window.print();</script></body></html>`;
+
+    const printWindow = window.open('', '_blank');
+    printWindow?.document.write(content);
+    printWindow?.document.close();
+  };
+
+  // Role-Based Tabs
+  const navItems = useMemo(() => {
+    const allItems = [
+      { id: 'SETUP', label: 'Setup', icon: Settings2, roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { id: 'MARKET', label: 'Finance & ROI', icon: BarChart3, roles: ['SUPER_ADMIN', 'FINANCE'] },
+      { id: 'FLEET', label: 'Vessel Management', icon: Ship, roles: ['SUPER_ADMIN', 'OPERATIONS'] },
+      { id: 'EVENTS', label: 'Event HQ', icon: CalendarIcon, roles: ['SUPER_ADMIN', 'OPERATIONS'] },
+      { id: 'MEMBERS', label: 'Command Registry', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { id: 'WORKERS', label: 'Human Assets', icon: UserCog, roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { id: 'ITEMS', label: 'Menu & Stocks', icon: Package, roles: ['SUPER_ADMIN', 'OPERATIONS'] },
+      { id: 'VOUCHERS', label: 'Vouchers', icon: Ticket, roles: ['SUPER_ADMIN', 'FINANCE'] },
+      { id: 'PROTOCOL', label: 'Unit Manuals', icon: BookOpen, roles: ['SUPER_ADMIN', 'FINANCE', 'ADMIN', 'OPERATIONS'] },
+      { id: 'COMMUNICATION', label: 'WhatsApp Center', icon: MessageSquare, roles: ['SUPER_ADMIN'] },
+      { id: 'EXPORTS', label: 'Master Reports', icon: ListChecks, roles: ['SUPER_ADMIN'] },
+    ];
+    return allItems.filter(item => item.roles.includes(user?.role || ''));
+  }, [user]);
+
+  // Set default tab based on user role when entering
+  useEffect(() => {
+    if (navItems.length > 0 && !navItems.find(n => n.id === activeTab)) {
+      setActiveTab(navItems[0].id as any);
+    }
+  }, [navItems]);
 
   const SyncButton = () => (
     <button
@@ -509,49 +598,63 @@ export const Admin = () => {
         {/* MARKET / ANALYTICS TAB */}
         {activeTab === 'MARKET' && (
           <div className="space-y-8 animate-in zoom-in duration-500">
-            {/* Dynamic KPIs Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-1">
-              <div className="bg-slate-950 p-6 rounded-[2.5rem] text-white border border-white/10 shadow-2xl relative overflow-hidden group hover:scale-[1.02] transition-transform">
+            {/* Dynamic KPIs Grid - 2x2 Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 px-1">
+              <div className="bg-slate-950 p-7 rounded-[2.5rem] text-white border border-white/10 shadow-2xl relative overflow-hidden group hover:scale-[1.02] transition-transform min-h-[160px] flex flex-col justify-between">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-sun-500 rounded-full blur-[60px] opacity-10 group-hover:opacity-20 transition-opacity" />
-                <div className="flex items-center gap-2 text-slate-500 mb-3">
-                  <TrendingUp size={14} className="text-sun-500" /><span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total Revenue</span>
-                </div>
-                <p className="text-2xl font-black tracking-tighter">₦{stats.totalFlow.toLocaleString()}</p>
-                <div className="flex items-center gap-1 text-[8px] font-black text-green-400 mt-2">
-                  <ArrowUpRight size={10} /> +12.4% THIS PERIOD
+                <div className="relative z-10 space-y-4">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <TrendingUp size={14} className="text-sun-500" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total Revenue</span>
+                  </div>
+                  <p className="text-3xl font-black tracking-tighter leading-none">₦{stats.totalFlow.toLocaleString()}</p>
+                  <div className="flex items-center gap-1 text-[8px] font-black text-green-400 pt-1">
+                    <ArrowUpRight size={10} />
+                    <span>+12.4% THIS PERIOD</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm relative group overflow-hidden hover:scale-[1.02] transition-transform">
+              <div className="bg-white dark:bg-slate-900 p-7 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm relative group overflow-hidden hover:scale-[1.02] transition-transform min-h-[160px] flex flex-col justify-between">
                 <div className="absolute bottom-0 right-0 w-20 h-20 bg-blue-500/5 rounded-full blur-[40px]" />
-                <div className="flex items-center gap-2 text-slate-400 mb-3">
-                  <Users size={14} className="text-blue-500" /><span className="text-[9px] font-black uppercase tracking-widest">Hub Liquidity</span>
-                </div>
-                <p className="text-2xl font-black tracking-tighter dark:text-white">₦{stats.hubLiquidity.toLocaleString()}</p>
-                <div className="flex items-center gap-1 text-[8px] font-black text-slate-400 mt-2">
-                  <MousePointer2 size={10} /> WALLET BALANCES
+                <div className="relative z-10 space-y-4">
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Users size={14} className="text-blue-500" />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Hub Liquidity</span>
+                  </div>
+                  <p className="text-3xl font-black tracking-tighter dark:text-white leading-none">₦{stats.hubLiquidity.toLocaleString()}</p>
+                  <div className="flex items-center gap-1 text-[8px] font-black text-slate-400 pt-1">
+                    <MousePointer2 size={10} />
+                    <span>WALLET BALANCES</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm relative group overflow-hidden hover:scale-[1.02] transition-transform">
+              <div className="bg-white dark:bg-slate-900 p-7 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm relative group overflow-hidden hover:scale-[1.02] transition-transform min-h-[160px] flex flex-col justify-between">
                 <div className="absolute top-0 right-0 w-20 h-20 bg-sun-500/5 rounded-full blur-[40px]" />
-                <div className="flex items-center gap-2 text-slate-400 mb-3">
-                  <Target size={14} className="text-sun-600" /><span className="text-[9px] font-black uppercase tracking-widest">Efficiency Rate</span>
-                </div>
-                <p className="text-2xl font-black tracking-tighter dark:text-white">{stats.completionRate.toFixed(1)}%</p>
-                <div className="flex items-center gap-1 text-[8px] font-black text-sun-600 mt-2 uppercase">
-                  ACTIVE BOOKINGS
+                <div className="relative z-10 space-y-4">
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <Target size={14} className="text-sun-600" />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Efficiency Rate</span>
+                  </div>
+                  <p className="text-3xl font-black tracking-tighter dark:text-white leading-none">{stats.completionRate.toFixed(1)}%</p>
+                  <div className="flex items-center gap-1 text-[8px] font-black text-sun-600 pt-1 uppercase">
+                    <span>ACTIVE BOOKINGS</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-slate-950 p-6 rounded-[2.5rem] text-white border border-white/10 shadow-2xl relative overflow-hidden group hover:scale-[1.02] transition-transform">
+              <div className="bg-slate-950 p-7 rounded-[2.5rem] text-white border border-white/10 shadow-2xl relative overflow-hidden group hover:scale-[1.02] transition-transform min-h-[160px] flex flex-col justify-between">
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-600 rounded-full blur-[60px] opacity-10 group-hover:opacity-20 transition-opacity" />
-                <div className="flex items-center gap-2 text-slate-500 mb-3">
-                  <Activity size={14} className="text-blue-400" /><span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Vessel Status</span>
-                </div>
-                <p className="text-2xl font-black tracking-tighter">{vessels.filter(v => v.status === 'IN_USE').length}/{vessels.length}</p>
-                <div className="flex items-center gap-1 text-[8px] font-black text-blue-400 mt-2 uppercase">
-                  Deployments Live
+                <div className="relative z-10 space-y-4">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <Activity size={14} className="text-blue-400" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Vessel Status</span>
+                  </div>
+                  <p className="text-3xl font-black tracking-tighter leading-none">{vessels.filter(v => v.status === 'IN_USE').length}/{vessels.length}</p>
+                  <div className="flex items-center gap-1 text-[8px] font-black text-blue-400 pt-1 uppercase">
+                    <span>Deployments Live</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1246,7 +1349,7 @@ export const Admin = () => {
         {/* PROTOCOL TAB */}
         {activeTab === 'PROTOCOL' && (
           <div className="space-y-8 animate-in slide-in-from-top">
-            {Object.entries(localKpis).map(([key, data]) => (
+            {Object.entries(localKpis).filter(([key]) => user?.role === 'SUPER_ADMIN' || user?.role === key).map(([key, data]) => (
               <div key={key} className="bg-white dark:bg-slate-900 p-8 rounded-[3.5rem] border border-slate-100 dark:border-slate-800 shadow-sm space-y-6 relative group">
                 <div className="flex items-center justify-between border-b border-slate-50 dark:border-slate-800 pb-5">
                   <div className="flex items-center gap-4">
@@ -1285,14 +1388,112 @@ export const Admin = () => {
                   {editingProtocolUnit === key && (
                     <button
                       onClick={() => handleSaveProtocol(key)}
-                      className="w-full mt-4 bg-slate-900 dark:bg-white dark:text-slate-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg"
+                      className="w-full bg-sun-500 text-slate-950 py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg mt-4"
                     >
-                      Synchronize guidelines
+                      Save Protocol Updates
                     </button>
                   )}
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* WHATSAPP COMMUNICATION CENTER */}
+        {activeTab === 'COMMUNICATION' && (
+          <div className="space-y-8 animate-in zoom-in duration-500">
+            <div className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] shadow-sm border border-slate-100 dark:border-slate-800 space-y-10">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 bg-green-500 rounded-[1.8rem] flex items-center justify-center text-white shadow-2xl">
+                  <MessageSquare size={32} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black dark:text-white uppercase tracking-tighter">Unified Communication Hub</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Send Broadcasts via WhatsApp</p>
+                </div>
+              </div>
+
+              <div className="grid lg:grid-cols-2 gap-10">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Select Target Members</label>
+                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border border-slate-100 dark:border-slate-800 max-h-[300px] overflow-y-auto space-y-3">
+                      {customers.map(c => (
+                        <label key={c.phone} className="flex items-center gap-4 p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 cursor-pointer hover:border-green-500 transition-all">
+                          <input type="checkbox" className="w-5 h-5 accent-green-500" />
+                          <div>
+                            <p className="text-xs font-black dark:text-white uppercase leading-none">{c.name}</p>
+                            <p className="text-[9px] font-bold text-slate-400 mt-1">{c.phone}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Dispatch Message</label>
+                    <textarea
+                      value={broadcastMessage}
+                      onChange={(e) => setBroadcastMessage(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 p-8 rounded-[2.5rem] text-sm font-bold dark:text-white focus:border-green-500 outline-none min-h-[200px] resize-none"
+                      placeholder="Type your WhatsApp broadcast message here..."
+                    ></textarea>
+                  </div>
+                  <button
+                    onClick={handleBroadcast}
+                    disabled={!broadcastMessage.trim() || isSyncing}
+                    className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-xl shadow-green-600/20 active:scale-95 transition-all"
+                  >
+                    {isSyncing ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                    {isSyncing ? 'Dispatching...' : 'Deploy WhatsApp Direct'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MASTER REPORTS CENTER */}
+        {activeTab === 'EXPORTS' && (
+          <div className="space-y-8 animate-in slide-in-from-bottom duration-500">
+            <div className="bg-white dark:bg-slate-900 p-10 rounded-[3.5rem] shadow-sm border border-slate-100 dark:border-slate-800 space-y-10">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 bg-blue-600 rounded-[1.8rem] flex items-center justify-center text-white shadow-2xl">
+                  <Printer size={32} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black dark:text-white uppercase tracking-tighter">Report Generation Command</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Export Data to Printable Formats</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  { label: 'Member Registry', sub: 'Complete Customer Data', icon: Users },
+                  { label: 'Financial Audit', sub: 'Sales & Revenue Trails', icon: DollarSign },
+                  { label: 'Fleet Status', sub: 'Vessel Logs & Usage', icon: Ship },
+                  { label: 'Human Manifest', sub: 'Staff Records & Performance', icon: Briefcase },
+                  { label: 'Catalogue Data', sub: 'Inventory & Menu List', icon: Package },
+                  { label: 'Audit Trail', sub: 'System Activity Logs', icon: History },
+                ].map((report, idx) => (
+                  <div key={idx} className="bg-slate-50 dark:bg-slate-800/30 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 group hover:border-blue-500 transition-all cursor-pointer">
+                    <div className="w-12 h-12 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-blue-600 mb-6 shadow-sm group-hover:scale-110 transition-transform">
+                      <report.icon size={24} />
+                    </div>
+                    <h4 className="text-sm font-black dark:text-white uppercase tracking-tighter">{report.label}</h4>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">{report.sub}</p>
+
+                    <div className="flex gap-2 mt-6 pt-6 border-t border-slate-200 dark:border-slate-700/50">
+                      <button onClick={() => handlePrintReport(report.label)} className="flex-1 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-500 transition-all" title="Print Report"><Printer size={16} /></button>
+                      <button onClick={() => handleExport(report.label, 'Markdown')} className="flex-1 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-500 transition-all" title="Export Markdown"><FileCode size={16} /></button>
+                      <button onClick={() => handleExport(report.label, 'CSV')} className="flex-1 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-3 rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-500 hover:border-blue-500 transition-all" title="Export CSV/Text"><FileType size={16} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -1471,6 +1672,14 @@ export const Admin = () => {
                     <input name="staffPhone" defaultValue={editingStaff?.phone} required className="w-full p-5 rounded-2xl bg-slate-50 dark:bg-slate-800 dark:text-white font-bold text-sm outline-none border-none shadow-inner" placeholder="080..." />
                   </div>
 
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Access Password</label>
+                    <div className="relative">
+                      <Key size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input name="staffPassword" type="text" defaultValue={editingStaff?.password || '1234'} required className="w-full p-5 pl-14 rounded-2xl bg-slate-50 dark:bg-slate-800 dark:text-white font-bold text-sm outline-none border-none shadow-inner" placeholder="Set login password..." />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Department</label>
@@ -1480,9 +1689,9 @@ export const Admin = () => {
                         <option value="MARINE">MARINE</option>
                         <option value="CLUB">CLUB</option>
                         <option value="SECURITY">SECURITY</option>
-                        <option value="FINANCE_MGMT">FINANCE MGMT</option>
-                        <option value="ADMIN_MGMT">ADMIN MGMT</option>
-                        <option value="OPERATIONS_MGMT">OPERATIONS MGMT</option>
+                        <option value="FINANCE_HEAD">HEAD OF FINANCE</option>
+                        <option value="ADMIN_HEAD">HEAD OF ADMIN</option>
+                        <option value="OPERATIONS_HEAD">HEAD OF OPERATIONS</option>
                         <option value="EXECUTIVE">EXECUTIVE</option>
                       </select>
                     </div>

@@ -260,15 +260,31 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   const login = (phone: string, password?: string) => {
+    // SUPER ADMIN (IT HEAD) - DEFAULT OR CONFIGURED
     if (phone === '0000' && password === adminPassword) {
-      setUser({ name: "Admin", phone: "0000", role: 'ADMIN', password: adminPassword });
+      setUser({ name: "IT Super Admin", phone: "0000", role: 'SUPER_ADMIN', password: adminPassword });
       return true;
     }
+
+    // SEARCH ALL REGISTERED ENTITIES (STAFF & CUSTOMERS)
     const staffMember = staffState.find(s => s.phone === phone && s.password === password);
     if (staffMember) {
-      setUser({ name: staffMember.name, phone: staffMember.phone, role: 'STAFF', staffRole: staffMember.role, password: staffMember.password });
+      // Map Staff roles to User roles for routing
+      let userRole: User['role'] = 'STAFF';
+      if (staffMember.role === 'FINANCE_HEAD') userRole = 'FINANCE';
+      if (staffMember.role === 'ADMIN_HEAD') userRole = 'ADMIN';
+      if (staffMember.role === 'OPERATIONS_HEAD') userRole = 'OPERATIONS';
+
+      setUser({
+        name: staffMember.name,
+        phone: staffMember.phone,
+        role: userRole,
+        staffRole: staffMember.role,
+        password: staffMember.password
+      });
       return true;
     }
+
     const customer = registeredUsers.find(u => u.phone === phone && u.password === password);
     if (customer) {
       setUser(customer);
@@ -280,9 +296,25 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   const signup = (name: string, phone: string, password?: string) => {
+    // ENFORCE WHATSAPP FORMAT (Basic check for now: starts with +, or 080/090/070 etc - Nigerian focus)
+    const isWhatsApp = /^\+?[0-9]{10,15}$/.test(phone);
+    if (!isWhatsApp) return false;
+
+    // ENFORCE STRONG PASSWORD (Min 8 chars, 1 uppercase, 1 number)
+    const isStrong = password && password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
+    if (!isStrong) return false;
+
     const prefix = name.split(' ')[0].substring(0, 3).toUpperCase();
     const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const newUser: User = { name, phone, role: 'CUSTOMER', password, loyaltyPoints: 0, walletBalance: 0, referralCode: `SUN-${prefix}-${randomPart}` };
+    const newUser: User = {
+      name,
+      phone,
+      role: 'CUSTOMER',
+      password,
+      loyaltyPoints: 0,
+      walletBalance: 0,
+      referralCode: `SUN-${prefix}-${randomPart}`
+    };
     setRegisteredUsers(prev => [...prev.filter(u => u.phone !== phone), newUser]);
     setUser(newUser);
     setLoyaltyPoints(0);

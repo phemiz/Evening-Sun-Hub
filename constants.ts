@@ -87,12 +87,12 @@ export const MOCK_STAFF: Staff[] = [
   { id: 'exec1', name: 'Louis Ntofon', role: 'EXECUTIVE', rating: 5.0, status: 'ACTIVE', phone: '0801', password: 'ceo', completedTasks: 0, earnings: 0, imageUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Louis' },
   { id: 'exec2', name: 'Mrs. Philomena', role: 'EXECUTIVE', rating: 5.0, status: 'ACTIVE', phone: '0802', password: 'md', completedTasks: 0, earnings: 0, imageUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Philomena' },
   { id: 'exec3', name: 'Mr. Umana', role: 'EXECUTIVE', rating: 5.0, status: 'ACTIVE', phone: '0803', password: 'chairman', completedTasks: 0, earnings: 0, imageUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Umana' },
-  
+
   // Management Team
-  { id: 'mgmt1', name: 'Mrs. Lynda', role: 'FINANCE_MGMT', rating: 4.9, status: 'ACTIVE', phone: '0804', password: 'lynda', completedTasks: 0, earnings: 0, imageUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lynda' },
-  { id: 'mgmt2', name: 'Mr. Isaac', role: 'ADMIN_MGMT', rating: 4.9, status: 'ACTIVE', phone: '0805', password: 'isaac', completedTasks: 0, earnings: 0, imageUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Isaac' },
-  { id: 'mgmt3', name: 'Ms. Utiebeima', role: 'OPERATIONS_MGMT', rating: 4.9, status: 'ACTIVE', phone: '0806', password: 'utie', completedTasks: 0, earnings: 0, imageUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Utie' },
-  
+  { id: 'mgmt1', name: 'Mrs. Lynda', role: 'FINANCE_HEAD', rating: 4.9, status: 'ACTIVE', phone: '0804', password: 'lynda', completedTasks: 0, earnings: 0, imageUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lynda' },
+  { id: 'mgmt2', name: 'Mr. Isaac', role: 'ADMIN_HEAD', rating: 4.9, status: 'ACTIVE', phone: '0805', password: 'isaac', completedTasks: 0, earnings: 0, imageUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Isaac' },
+  { id: 'mgmt3', name: 'Ms. Utiebeima', role: 'OPERATIONS_HEAD', rating: 4.9, status: 'ACTIVE', phone: '0806', password: 'utie', completedTasks: 0, earnings: 0, imageUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Utie' },
+
   // Field Staff
   { id: 'st1', name: 'Chioma', role: 'SALON', rating: 4.8, status: 'ACTIVE', phone: '08000000001', password: '1234', completedTasks: 142, earnings: 450000 },
   { id: 'st2', name: 'Emmanuel', role: 'SALON', rating: 4.9, status: 'ACTIVE', phone: '08000000002', password: '1234', completedTasks: 89, earnings: 280000 },

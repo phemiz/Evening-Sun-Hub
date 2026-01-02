@@ -31,7 +31,9 @@ export const Login = () => {
     e.preventDefault();
     if (mode === 'SIGNUP') {
       const success = signup(formData.name, formData.phone, formData.password);
-      if (!success) alert("Onboarding Failed.");
+      if (!success) {
+        alert("Registration Failed: Please ensure you use a valid WhatsApp Mobile Number and a strong Access Password (min 8 chars, 1 uppercase, 1 number).");
+      }
       return;
     }
 
@@ -137,22 +139,33 @@ export const Login = () => {
                 )}
 
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Mobile Number</label>
+                  <div className="flex justify-between items-center ml-4">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">WhatsApp Mobile Number</label>
+                    <span className="text-[8px] font-black text-sun-500 uppercase tracking-widest bg-sun-500/10 px-2 py-0.5 rounded-full">REQUIRED</span>
+                  </div>
                   <div className="relative">
                     <Smartphone size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
                       type="tel"
                       value={formData.phone}
                       onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="Enter mobile number"
+                      placeholder="+234 800 000 0000"
                       className="w-full pl-14 p-5 rounded-2xl bg-black/40 border border-white/5 text-white placeholder-slate-700 focus:border-sun-500 outline-none text-base font-bold shadow-inner"
                       required
                     />
                   </div>
+                  {mode === 'SIGNUP' && (
+                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-4 mt-1">International format required (e.g., +234...)</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Access Password</label>
+                  <div className="flex justify-between items-center ml-4">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Access Password</label>
+                    {mode === 'SIGNUP' && (
+                      <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">STRONG MODE</span>
+                    )}
+                  </div>
                   <div className="relative">
                     <Lock size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
@@ -164,6 +177,18 @@ export const Login = () => {
                       required
                     />
                   </div>
+                  {mode === 'SIGNUP' && (
+                    <div className="px-4 space-y-1 mt-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${formData.password.length >= 8 ? 'bg-green-500' : 'bg-slate-700'}`} />
+                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Min 8 Characters</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(formData.password) && /[0-9]/.test(formData.password) ? 'bg-green-500' : 'bg-slate-700'}`} />
+                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Upper & Numeric Check</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <button
