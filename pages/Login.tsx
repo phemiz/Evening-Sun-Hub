@@ -1,262 +1,437 @@
 
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import {
-  Smartphone, User, Lock, ArrowRight, Sun, Sparkles, LogIn,
-  ShieldCheck, ChevronRight, Globe, Zap, RefreshCw, Loader2,
-  Key, ShieldAlert, Fingerprint
+import { 
+  Smartphone, User, Lock, ArrowRight, Sun, ShieldCheck, ChevronRight, 
+  Zap, Loader2, Fingerprint, Mail, ArrowLeft, AlertCircle, Cpu, Key,
+  MessageCircle, Search, ShieldAlert, CheckCircle2, BellRing, X
 } from 'lucide-react';
 
-export const Login = () => {
-  const { login, signup, settings } = useApp();
-  const is2FA = settings.security.twoFactor;
+type AuthStep = 'SPLASH' | 'WELCOME' | 'IDENTIFY' | 'VERIFYING' | 'OTP_VERIFY' | 'PASSWORD_ENTRY';
 
+export const Login = () => {
+  const { login, signup } = useApp();
+  
+  const [step, setStep] = useState<AuthStep>('SPLASH');
   const [mode, setMode] = useState<'LOGIN' | 'SIGNUP'>('LOGIN');
-  const [step, setStep] = useState(1);
-  const [isMounting, setIsMounting] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
+  
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  
+  const [generatedOtp, setGeneratedOtp] = useState<string>("");
+  const [showNotification, setShowNotification] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    email: '',
     password: '',
     otp: ''
   });
 
   useEffect(() => {
-    setIsMounting(true);
-  }, []);
-
-  const handleInitialAuth = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (mode === 'SIGNUP') {
-      const success = signup(formData.name, formData.phone, formData.password);
-      if (!success) {
-        alert("Registration Failed: Please ensure you use a valid WhatsApp Mobile Number and a strong Access Password (min 8 chars, 1 uppercase, 1 number).");
-      }
-      return;
+    if (step === 'SPLASH') {
+      const timer = setTimeout(() => setStep('WELCOME'), 2500);
+      return () => clearTimeout(timer);
     }
+  }, [step]);
 
-    if (is2FA) {
-      setIsVerifying(true);
-      setTimeout(() => {
-        setIsVerifying(false);
-        setStep(2);
-      }, 1200);
-    } else {
-      const success = login(formData.phone, formData.password);
-      if (!success) triggerShake();
-    }
+  const handleBack = () => {
+    if (step === 'IDENTIFY') setStep('WELCOME');
+    else if (step === 'OTP_VERIFY' || step === 'VERIFYING') setStep('IDENTIFY');
+    else if (step === 'PASSWORD_ENTRY') setStep('OTP_VERIFY');
   };
 
-  const handle2FAVerify = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsVerifying(true);
-    setTimeout(() => {
-      const success = login(formData.phone, formData.password);
-      if (!success) {
-        setIsVerifying(false);
-        triggerShake();
+  const validateInputs = () => {
+    const errors: Record<string, string> = {};
+    
+    if (mode === 'SIGNUP') {
+      const nameParts = formData.name.trim().split(/\s+/);
+      if (nameParts.length < 2 || formData.name.length < 3) {
+        errors.name = "Enter your full first and last name.";
       }
+    }
+
+    const cleanPhone = formData.phone.replace(/\s/g, '');
+    const phoneRegex = /^(?:\+234|0)[789][01]\d{8}$/;
+    
+    // Admin Override: Allow '0000'
+    if (cleanPhone !== '0000' && !phoneRegex.test(cleanPhone)) {
+      errors.phone = "Invalid WhatsApp format. Use 080... or +234...";
+    }
+
+    // Fixed Email validation: Strict RFC regex (corrected 0-0 to 0-9)
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      errors.email = "Please provide a valid email address.";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const triggerOtpDispatch = () => {
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedOtp(code);
+    setError(null);
+    setFormData(prev => ({ ...prev, otp: '' }));
+    
+    // Simulate WhatsApp network delay
+    setTimeout(() => {
+      setShowNotification(true);
+      // Auto-hide notification after 10 seconds
+      setTimeout(() => setShowNotification(false), 10000);
     }, 1500);
   };
 
-  const triggerShake = () => {
-    const card = document.getElementById('login-card');
-    card?.classList.add('animate-[shake_0.5s_ease-in-out]');
-    setTimeout(() => card?.classList.remove('animate-[shake_0.5s_ease-in-out]'), 500);
+  const handleIdentify = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateInputs()) return;
+    
+    setStep('VERIFYING');
+    setIsLoading(true);
+    
+    // Simulated Online Verification Protocol
+    setTimeout(() => {
+      setIsLoading(false);
+      setStep('OTP_VERIFY');
+      triggerOtpDispatch();
+    }, 2400);
   };
+
+  const handleVerifyOTP = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.otp.length < 4) return;
+    
+    setIsLoading(true);
+    setError(null);
+
+    // Real-time matching logic
+    setTimeout(() => {
+      setIsLoading(false);
+      if (formData.otp === generatedOtp) {
+        setStep('PASSWORD_ENTRY');
+      } else {
+        setError("Synchronization code mismatch. Check WhatsApp.");
+      }
+    }, 1000);
+  };
+
+  const handleFinalAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    setTimeout(() => {
+      setIsLoading(false);
+      const success = mode === 'SIGNUP' 
+        ? signup(formData.name, formData.phone, formData.password)
+        : login(formData.phone, formData.password);
+      
+      if (!success) {
+        setError("Synchronization failed. Invalid station credentials.");
+      }
+    }, 1200);
+  };
+
+  if (step === 'SPLASH') {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center space-y-8 animate-in fade-in duration-1000">
+        <div className="relative">
+          <div className="absolute inset-0 bg-sun-500 rounded-[2.5rem] blur-3xl opacity-30 animate-pulse" />
+          <div className="relative w-32 h-32 bg-gradient-to-tr from-sun-600 to-sun-400 rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl">
+            <Sun size={64} className="animate-spin-slow" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-none">Evening Sun</h1>
+          <p className="text-sun-500 text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">Establishing Hub Connection...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'WELCOME') {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center space-y-12 animate-in slide-in-from-bottom-10">
+        <div className="space-y-6">
+          <h2 className="text-6xl font-black text-white leading-none tracking-tighter uppercase italic">
+            Welcome <br/> <span className="text-sun-500">To the Hub.</span>
+          </h2>
+          <p className="text-slate-400 text-sm font-bold uppercase tracking-widest leading-relaxed px-8">
+            The official Badagry station for Kitchen, Salon, Club, and Marine Services.
+          </p>
+        </div>
+        <div className="w-full max-w-sm space-y-4">
+          <button 
+            onClick={() => { setMode('SIGNUP'); setStep('IDENTIFY'); }}
+            className="w-full bg-sun-500 hover:bg-sun-400 text-slate-950 py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl flex items-center justify-center gap-3 transition-all border-b-4 border-sun-700"
+          >
+            Create Account <ArrowRight size={18} />
+          </button>
+          <button 
+            onClick={() => { setMode('LOGIN'); setStep('IDENTIFY'); }}
+            className="w-full bg-white/5 border border-white/10 text-white py-6 rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 active:scale-95"
+          >
+            Login to Account <ChevronRight size={18} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'VERIFYING') {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 text-center space-y-12 animate-in zoom-in">
+        <div className="w-24 h-24 bg-sun-500/10 rounded-[2.5rem] flex items-center justify-center relative">
+          <div className="absolute inset-0 border-4 border-sun-500/30 rounded-[2.5rem] animate-ping" />
+          <Cpu size={48} className="text-sun-500 animate-pulse" />
+        </div>
+        <div className="space-y-4 max-w-xs">
+          <h3 className="text-2xl font-black text-white uppercase tracking-tighter italic">Online Verification</h3>
+          <div className="space-y-3">
+             <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                <span className="text-slate-500">WhatsApp Node:</span>
+                <span className="text-green-500 flex items-center gap-1">Checking API... <Loader2 size={10} className="animate-spin"/></span>
+             </div>
+             <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full bg-sun-500 w-2/3 animate-[verify_2s_ease-in-out_infinite]" />
+             </div>
+             <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                <span className="text-slate-500">Email Reputation:</span>
+                <span className="text-sun-500">Establishing link...</span>
+             </div>
+          </div>
+          <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed pt-4">
+             Synchronizing with Central Registry for Badagry Unit membership integrity.
+          </p>
+        </div>
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes verify {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(150%); }
+          }
+        `}} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 overflow-hidden relative">
-      {/* Dynamic Mesh Background */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-sun-600/10 rounded-full blur-[120px] animate-pulse" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-sun-900/10 rounded-full blur-[150px] animation-delay-2000" />
-
-      <div className={`w-full max-w-sm space-y-8 relative z-10 transition-all duration-1000 transform ${isMounting ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-
-        {/* Branding Section */}
-        <div className="text-center space-y-6">
-          <div className="relative inline-block group">
-            <div className="absolute inset-0 bg-sun-500 rounded-[2.5rem] blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
-            <div className="relative w-24 h-24 bg-gradient-to-tr from-sun-600 to-sun-400 rounded-[2rem] flex items-center justify-center text-white shadow-xl transform -rotate-3 transition-transform hover:rotate-0 duration-500">
-              <Sun size={48} strokeWidth={2.5} className="drop-shadow-lg" />
+      
+      {/* Real-time WhatsApp Notification Simulation */}
+      <div className={`fixed top-6 left-6 right-6 z-[200] transition-all duration-700 transform ${showNotification ? 'translate-y-0 opacity-100' : '-translate-y-32 opacity-0'}`}>
+         <div className="bg-[#128C7E] text-white p-4 rounded-3xl shadow-2xl flex items-center gap-4 border border-white/20">
+            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center shrink-0">
+               <MessageCircle size={28} fill="currentColor"/>
             </div>
-            {is2FA && (
-              <div className="absolute -bottom-2 -right-2 bg-blue-600 border-2 border-slate-950 p-2 rounded-xl text-white shadow-xl animate-bounce">
-                <ShieldCheck size={20} />
-              </div>
-            )}
-          </div>
+            <div className="flex-1 min-w-0">
+               <div className="flex justify-between items-center mb-0.5">
+                  <span className="text-[10px] font-black uppercase tracking-widest">Evening Sun Hub</span>
+                  <span className="text-[8px] opacity-60">NOW</span>
+               </div>
+               <p className="text-xs font-bold truncate">Your synchronization code is <span className="text-lg font-black tracking-widest">{generatedOtp}</span>. Do not share.</p>
+            </div>
+            <button onClick={() => setShowNotification(false)} className="p-2 opacity-50 active:scale-90 transition-transform"><X size={16}/></button>
+         </div>
+      </div>
 
-          <div className="space-y-2">
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">
-              Evening Sun <span className="text-sun-500 text-5xl">.</span>
-            </h1>
-            <p className="text-slate-400 text-xs font-black uppercase tracking-[0.4em]">All-in-One Service Center</p>
-          </div>
+      <div className="relative z-10 w-full max-w-sm space-y-8 animate-in slide-in-from-right duration-500">
+        <button onClick={handleBack} className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors group">
+          <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Return</span>
+        </button>
+
+        <div className="space-y-2">
+          <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">
+            {mode === 'SIGNUP' ? 'Membership Registration' : 'Greetings, Boss'}
+          </h3>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Kindly enter your details to proceed</p>
         </div>
 
-        {/* Auth Card */}
-        <div id="login-card" className="bg-white/5 backdrop-blur-2xl rounded-[3rem] p-8 shadow-2xl border border-white/10 relative overflow-hidden group">
+        <div className="bg-white/5 backdrop-blur-2xl rounded-[2.5rem] p-8 border border-white/10 space-y-8 shadow-2xl relative">
+          {step === 'IDENTIFY' && (
+            <form onSubmit={handleIdentify} className="space-y-6">
+              {mode === 'SIGNUP' && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Full Official Name</label>
+                  <div className="relative group">
+                    <User size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.name ? 'text-red-500' : 'text-slate-600 group-focus-within:text-sun-500'}`} />
+                    <input 
+                      required 
+                      type="text" 
+                      value={formData.name} 
+                      onChange={e => {
+                        setFormData({...formData, name: e.target.value});
+                        if (fieldErrors.name) setFieldErrors({...fieldErrors, name: ''});
+                      }} 
+                      className={`w-full pl-14 p-5 rounded-2xl bg-black/40 border text-white outline-none transition-all font-bold placeholder:text-slate-700 ${fieldErrors.name ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-sun-500'}`} 
+                      placeholder="Enter your complete name" 
+                    />
+                  </div>
+                  {fieldErrors.name && <p className="text-[8px] font-black uppercase text-red-500 tracking-widest ml-4 mt-1">{fieldErrors.name}</p>}
+                </div>
+              )}
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">WhatsApp Number (Compulsory)</label>
+                <div className="relative group">
+                  <MessageCircle size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.phone ? 'text-red-500' : 'text-slate-600 group-focus-within:text-green-500'}`} />
+                  <input 
+                    required 
+                    type="tel" 
+                    value={formData.phone} 
+                    onChange={e => {
+                      setFormData({...formData, phone: e.target.value});
+                      if (fieldErrors.phone) setFieldErrors({...fieldErrors, phone: ''});
+                    }} 
+                    className={`w-full pl-14 p-5 rounded-2xl bg-black/40 border text-white outline-none transition-all font-bold placeholder:text-slate-700 ${fieldErrors.phone ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-green-500'}`} 
+                    placeholder="080... (WhatsApp Line)" 
+                  />
+                </div>
+                {fieldErrors.phone && <p className="text-[8px] font-black uppercase text-red-500 tracking-widest ml-4 mt-1">{fieldErrors.phone}</p>}
+              </div>
 
-          {/* Header Actions */}
-          {step === 1 && (
-            <div className="flex bg-black/40 p-2 rounded-[1.8rem] mb-8 border border-white/5">
-              <button
-                onClick={() => setMode('LOGIN')}
-                className={`flex-1 py-4 rounded-[1.5rem] text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 ${mode === 'LOGIN' ? 'bg-sun-500 text-slate-950 shadow-lg' : 'text-slate-500'}`}
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => setMode('SIGNUP')}
-                className={`flex-1 py-4 rounded-[1.5rem] text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 ${mode === 'SIGNUP' ? 'bg-sun-500 text-slate-950 shadow-lg' : 'text-slate-500'}`}
-              >
-                Join Us
-              </button>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Valid Email Address</label>
+                <div className="relative group">
+                  <Mail size={18} className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.email ? 'text-red-500' : 'text-slate-600 group-focus-within:text-sun-500'}`} />
+                  <input 
+                    required 
+                    type="email" 
+                    value={formData.email} 
+                    onChange={e => {
+                      setFormData({...formData, email: e.target.value});
+                      if (fieldErrors.email) setFieldErrors({...fieldErrors, email: ''});
+                    }} 
+                    className={`w-full pl-14 p-5 rounded-2xl bg-black/40 border text-white outline-none transition-all font-bold placeholder:text-slate-700 ${fieldErrors.email ? 'border-red-500/50 focus:border-red-500' : 'border-white/5 focus:border-sun-500'}`} 
+                    placeholder="boss@eveningsun.com.ng" 
+                  />
+                </div>
+                {fieldErrors.email && <p className="text-[8px] font-black uppercase text-red-500 tracking-widest ml-4 mt-1">{fieldErrors.email}</p>}
+              </div>
+
+              <div className="pt-2">
+                <button 
+                  type="submit" 
+                  disabled={isLoading} 
+                  className={`w-full bg-sun-500 text-slate-950 py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl flex items-center justify-center gap-2 active:scale-95 transition-all border-b-4 border-sun-700 ${Object.keys(fieldErrors).length > 0 ? 'opacity-80' : ''}`}
+                >
+                  {isLoading ? <Loader2 className="animate-spin" size={18}/> : (mode === 'SIGNUP' ? 'Complete Registration' : 'Verify Identity')}
+                </button>
+              </div>
+              
+              <div className="flex items-center gap-2 justify-center px-4">
+                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                 <p className="text-[8px] font-black uppercase text-slate-600 tracking-widest text-center italic leading-relaxed">
+                   WhatsApp Strict synchronization required for node activation.
+                 </p>
+              </div>
+            </form>
+          )}
+
+          {step === 'OTP_VERIFY' && (
+            <div className="space-y-8 text-center animate-in zoom-in">
+              <div className="w-20 h-20 bg-green-500/10 rounded-[1.5rem] flex items-center justify-center mx-auto text-green-500 shadow-inner ring-4 ring-green-500/5 relative">
+                <MessageCircle size={40} />
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white border-2 border-slate-900 animate-bounce">
+                   <BellRing size={12}/>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-xl font-black text-white uppercase tracking-tighter italic">WhatsApp Protocol</h4>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-4 leading-relaxed">
+                  The synchronization code was dispatched to <br/> <span className="text-green-500 font-black">+{formData.phone}</span> via WhatsApp.
+                </p>
+              </div>
+              <div className="space-y-4">
+                {/* Fixed OTP input for 4 digits */}
+                <input 
+                  autoFocus 
+                  type="tel" 
+                  maxLength={4} 
+                  value={formData.otp} 
+                  onChange={e => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    if (val.length <= 4) {
+                      setFormData({...formData, otp: val});
+                      if (error) setError(null);
+                    }
+                  }} 
+                  className={`w-full p-6 rounded-2xl bg-black/60 border text-white text-4xl font-black text-center tracking-[0.5em] outline-none shadow-inner transition-all ${error ? 'border-red-500 animate-shake' : 'border-white/10 focus:border-green-500'}`} 
+                  placeholder="0000" 
+                />
+                {error && <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">{error}</p>}
+              </div>
+              <div className="space-y-4">
+                <button 
+                  onClick={handleVerifyOTP} 
+                  disabled={isLoading || formData.otp.length < 4} 
+                  className="w-full bg-white text-slate-950 py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  {isLoading ? <Loader2 className="animate-spin" size={18}/> : 'Authenticate Connection'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={triggerOtpDispatch}
+                  className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-white transition-colors"
+                >
+                  I didn't receive the code
+                </button>
+              </div>
             </div>
           )}
 
-          <form onSubmit={step === 1 ? handleInitialAuth : handle2FAVerify} className="space-y-6">
-            {step === 1 ? (
-              <div className="space-y-6 animate-in slide-in-from-left duration-500">
-                {mode === 'SIGNUP' && (
-                  <div className="space-y-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Full Name</label>
-                    <div className="relative">
-                      <User size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Enter your full name"
-                        className="w-full pl-14 p-5 rounded-2xl bg-black/40 border border-white/5 text-white placeholder-slate-700 focus:border-sun-500 outline-none text-base font-bold shadow-inner"
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center ml-4">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">WhatsApp Mobile Number</label>
-                    <span className="text-[8px] font-black text-sun-500 uppercase tracking-widest bg-sun-500/10 px-2 py-0.5 rounded-full">REQUIRED</span>
-                  </div>
-                  <div className="relative">
-                    <Smartphone size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+234 800 000 0000"
-                      className="w-full pl-14 p-5 rounded-2xl bg-black/40 border border-white/5 text-white placeholder-slate-700 focus:border-sun-500 outline-none text-base font-bold shadow-inner"
-                      required
-                    />
-                  </div>
-                  {mode === 'SIGNUP' && (
-                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest ml-4 mt-1">International format required (e.g., +234...)</p>
-                  )}
+          {step === 'PASSWORD_ENTRY' && (
+            <form onSubmit={handleFinalAuth} className="space-y-8 animate-in slide-in-from-bottom-5">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-sun-500/20 rounded-[1.2rem] flex items-center justify-center mx-auto text-sun-500 border border-sun-500/30">
+                  <Key size={32} className="animate-pulse" />
                 </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center ml-4">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Access Password</label>
-                    {mode === 'SIGNUP' && (
-                      <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">STRONG MODE</span>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <Lock size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500" />
-                    <input
-                      type="password"
-                      value={formData.password}
-                      onChange={e => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="••••••••"
-                      className="w-full pl-14 p-5 rounded-2xl bg-black/40 border border-white/5 text-white placeholder-slate-700 focus:border-sun-500 outline-none text-base font-bold tracking-widest shadow-inner"
-                      required
-                    />
-                  </div>
-                  {mode === 'SIGNUP' && (
-                    <div className="px-4 space-y-1 mt-2">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${formData.password.length >= 8 ? 'bg-green-500' : 'bg-slate-700'}`} />
-                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Min 8 Characters</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${/[A-Z]/.test(formData.password) && /[0-9]/.test(formData.password) ? 'bg-green-500' : 'bg-slate-700'}`} />
-                        <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Upper & Numeric Check</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isVerifying}
-                  className="w-full bg-sun-600 hover:bg-sun-500 text-white py-6 rounded-[1.8rem] font-black text-sm uppercase tracking-[0.3em] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-4 mt-4"
-                >
-                  {isVerifying ? <Loader2 className="animate-spin" size={20} /> : mode === 'LOGIN' ? (is2FA ? 'Verifying Access...' : 'Sign In') : 'Register Now'}
-                  {!isVerifying && <ChevronRight size={20} strokeWidth={3} />}
-                </button>
+                <h4 className="text-xl font-black text-white uppercase tracking-tighter italic">{mode === 'SIGNUP' ? 'Define Node Key' : 'Enter Station Key'}</h4>
               </div>
-            ) : (
-              /* TWO-FACTOR STEP */
-              <div className="space-y-8 animate-in zoom-in duration-500">
-                <div className="text-center space-y-4">
-                  <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto text-blue-500 mb-4 ring-8 ring-blue-500/5">
-                    <ShieldAlert size={32} />
-                  </div>
-                  <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Two-Factor Security</h3>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest leading-relaxed">Check device {formData.phone.slice(-4)} for security code</p>
+              <div className="relative group">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-sun-500 transition-colors">
+                  <Lock size={18} />
                 </div>
-
-                <div className="space-y-4">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Verify Identity</label>
-                  <input
-                    autoFocus
-                    type="text"
-                    maxLength={4}
-                    value={formData.otp}
-                    onChange={e => setFormData({ ...formData, otp: e.target.value })}
-                    placeholder="0 0 0 0"
-                    className="w-full p-8 rounded-3xl bg-black/60 border border-white/10 text-white placeholder-slate-800 focus:border-sun-500 outline-none text-4xl font-black text-center tracking-[0.4em] shadow-inner"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={formData.otp.length < 4 || isVerifying}
-                  className="w-full bg-white text-slate-950 py-6 rounded-[1.8rem] font-black text-sm uppercase tracking-[0.3em] shadow-3xl active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-30"
-                >
-                  {isVerifying ? <Loader2 className="animate-spin" size={20} /> : <><Fingerprint size={24} /> Complete Log In</>}
-                </button>
-
-                <button type="button" onClick={() => setStep(1)} className="w-full text-slate-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-300 transition-colors">Go Back</button>
+                <input 
+                  autoFocus 
+                  required 
+                  type="password" 
+                  value={formData.password} 
+                  onChange={e => setFormData({...formData, password: e.target.value})} 
+                  className="w-full pl-14 p-5 rounded-2xl bg-black/50 border border-white/5 focus:border-sun-500 transition-all font-black text-white outline-none shadow-inner tracking-[0.5em]" 
+                  placeholder="••••" 
+                />
               </div>
-            )}
-          </form>
-        </div>
-
-        {/* Footer Meta */}
-        <div className="pt-8 space-y-8 opacity-40">
-          <div className="flex items-center justify-center gap-12">
-            <div className="flex flex-col items-center">
-              <Globe size={24} className="text-slate-400 mb-2" />
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Secured Gateway</span>
-            </div>
-            <div className="w-px h-10 bg-white/10" />
-            <div className="flex flex-col items-center">
-              <Zap size={24} className="text-slate-400 mb-2" />
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Monitoring</span>
-            </div>
-          </div>
-          <p className="text-center text-[9px] text-slate-500 font-bold leading-relaxed uppercase tracking-[0.3em]">
-            Evening Sun Hub v2.8.5<br />
-            {is2FA ? 'Enhanced Security Mode' : 'Basic Security Mode'}
-          </p>
+              {error && (
+                <div className="flex items-center gap-3 p-4 bg-red-500/10 rounded-xl border border-red-500/20 text-red-500 animate-in shake-x">
+                  <AlertCircle size={16} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">{error}</span>
+                </div>
+              )}
+              <button 
+                type="submit" 
+                disabled={isLoading || formData.password.length < 4} 
+                className="w-full bg-sun-500 hover:bg-sun-400 text-slate-950 py-6 rounded-2xl font-black text-xs uppercase tracking-[0.4em] shadow-3xl active:scale-95 transition-all flex items-center justify-center gap-4 border-b-8 border-sun-700"
+              >
+                {isLoading ? <Loader2 className="animate-spin" size={24} /> : <><ShieldCheck size={28}/> Complete Handshake</>}
+              </button>
+            </form>
+          )}
         </div>
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        .animate-shake {
+          animation: shake 0.2s ease-in-out 0s 2;
+        }
+      `}} />
     </div>
   );
 };

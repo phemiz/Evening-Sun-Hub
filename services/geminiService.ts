@@ -1,43 +1,83 @@
-import { GoogleGenAI } from "@google/genai";
-import { SERVICE_CATEGORIES, MOCK_PRODUCTS, MOCK_SERVICES } from "../constants";
+import { GoogleGenAI, Type, FunctionDeclaration } from "@google/genai";
 
-// Helper to generate AI response for the concierge chat following strict @google/genai guidelines
-export const generateAIResponse = async (userMessage: string): Promise<string> => {
-  // Always verify that the API_KEY is present as per guidelines
-  if (!process.env.API_KEY) {
-    return "I'm currently offline (API Key missing). Please check back later!";
-  }
+const getTrendingServicesDeclaration: FunctionDeclaration = {
+  name: 'getTrendingServices',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Query the Hub station for currently trending services and available stock.',
+    properties: {
+      category: {
+        type: Type.STRING,
+        description: 'Optional category filter (EATERY, SALON, MARINE, CLUB).',
+      },
+    },
+  },
+};
 
-  // Initialize the client using the correct named parameter syntax
-  // Instantiate inside the function to ensure the current environment variable value is used
+const checkHubLoadDeclaration: FunctionDeclaration = {
+  name: 'checkHubLoad',
+  parameters: {
+    type: Type.OBJECT,
+    description: 'Check the current demand at specific stations to advise on wait times.',
+    properties: {
+      station: {
+        type: Type.STRING,
+        description: 'Station ID to check.',
+      },
+    },
+  },
+};
+
+export const generateAIResponse = async (userMessage: string, history: any[] = []): Promise<string> => {
+  if (!process.env.API_KEY) return "Service Offline: System connection failed.";
+  
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-  // Construct context from app data to guide the concierge
-  const context = `
-    You are the 'Evening Sun Concierge', a helpful AI assistant for the Evening Sun Hub application in Badagry, Lagos.
-    The hub includes:
-    1. Eatery & Supermarket: ${MOCK_PRODUCTS.map(p => p.name).join(', ')}.
-    2. Beauty Salon & Barbing: ${Object.values(MOCK_SERVICES).flat().map(s => s.name).join(', ')}.
-    3. Club & Lounge: Friday Night Grooves, Sunday Live Band.
-    4. Marine Services: Boat rentals and island trips.
+  
+  const hubIntel = `
+    IDENTITY: You are the "Evening Sun Hub Assistant" based in Lagos, Nigeria.
+    COMMUNICATION STYLE:
+    - Language: Formal Nigerian English. Do NOT use Pidgin English.
+    - Tone: Highly respectful, professional, and sophisticated.
+    - Honorifics: Address the user as "Boss", "Chairman", "Madam", or "Sir" where appropriate.
+    - Terminology: Use "Station" or "Unit" instead of Node. Use "Record" or "History" instead of Manifest. Use "Conference Room" and "VIP Room".
+    - Context: Refer to the Kitchen, Salon, and Jetty as "Stations" or "Units".
     
-    Your goal is to be polite, use Nigerian warmth, and help users find services.
-    Keep answers short (under 50 words) and direct.
-    
-    User Query: ${userMessage}
+    GUIDELINES:
+    - If the user asks for food, suggest a premium drink or a gaming session for relaxation.
+    - If the user expresses interest in the Club, suggest visiting the Salon first for grooming.
+    - If the user plans a Marine trip, recommend ordering a refreshment hamper.
+    - When a station is busy, politely advise the user to browse the supermarket while they wait.
   `;
 
   try {
-    // Generate content using the recommended model for basic text tasks
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: context,
+      contents: [
+        ...history.map(h => ({
+          role: h.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: h.text }]
+        })),
+        { role: 'user', parts: [{ text: userMessage }] }
+      ],
+      config: {
+        systemInstruction: hubIntel,
+        tools: [{ functionDeclarations: [getTrendingServicesDeclaration, checkHubLoadDeclaration] }],
+      }
     });
-    
-    // Extract text from the GenerateContentResponse object's text property (not a method)
-    return response.text || "I didn't catch that. Could you try again?";
+
+    if (response.functionCalls) {
+      const call = response.functionCalls[0];
+      if (call.name === 'getTrendingServices') {
+        return "Respected Boss, our 'Marching Ground Special' is currently the most requested delicacy at the Kitchen Station. Would you like to place an order?";
+      }
+      if (call.name === 'checkHubLoad') {
+        return "Sir, the Kitchen Unit is currently experiencing high demand. While we prepare your meal, you might consider a professional grooming session at the Salon. How would you like to proceed?";
+      }
+    }
+
+    return response.text || "I apologize Boss, the connection was interrupted. Kindly try again.";
   } catch (error) {
-    console.error("Gemini Error:", error);
-    return "I'm having trouble connecting to the server. Please try again.";
+    console.error("AI Error:", error);
+    return "The system is currently unavailable. Kindly try again later, Boss.";
   }
 };

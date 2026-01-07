@@ -1,6 +1,6 @@
 {
   "name": "Evening Sun Hub",
-  "description": "A unified lifestyle platform for Eatery, Salon, Club, and Marine services.",
+  "description": "A sophisticated lifestyle platform providing unified management for Eatery, Salon, Club, and Marine services.",
   "requestFramePermissions": [
     "camera",
     "microphone",
