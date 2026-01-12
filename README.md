@@ -10,19 +10,24 @@ This application brings customers, staff, and management together in one ecosyst
 
 📌 Repository: https://github.com/phemiz/Evening-Sun-Hub
 
-📸 Screenshots (Placeholders)
+
 
 Add screenshots in these sections for better visual understanding:
 
 🖼️ Landing Page / Home Screen
+<img width="536" height="729" alt="image" src="https://github.com/user-attachments/assets/7d7251a3-1fc6-4bed-973e-adcb8d99ba44" />
 
 🖼️ Customer App – Menu & Booking
+<img width="461" height="555" alt="image" src="https://github.com/user-attachments/assets/318790ad-cb9c-4c58-a246-7e3473436304" />
 
 🖼️ Cart & Checkout Flow
+<img width="526" height="471" alt="image" src="https://github.com/user-attachments/assets/97f232cd-2e36-4577-bf8d-1a990ef10ab1" />
 
 🖼️ Staff App Dashboard
+<img width="708" height="604" alt="image" src="https://github.com/user-attachments/assets/0ab4df21-1d1b-490d-a231-cd8c1d3aa6ce" />
 
 🖼️ Admin Dashboard (Web)
+<img width="317" height="557" alt="image" src="https://github.com/user-attachments/assets/5a85365a-7afd-4746-b1fe-2ccb2f8b5cd1" />
 
 🚀 Key Features Overview
 👥 Multi-User System
@@ -38,6 +43,7 @@ Super Admin (Web Dashboard)
 🏢 Multi-Business Support
 
 Supports multiple business types within one platform:
+<img width="409" height="716" alt="image" src="https://github.com/user-attachments/assets/be29e94a-1b27-403e-ac20-aa8abddb119c" />
 
 🍽️ Eatery / Restaurant
 
@@ -60,19 +66,21 @@ Featured services and promotions
 
 Location-based discovery
 
-📸 Screenshot: Home Screen
+<img width="298" height="190" alt="image" src="https://github.com/user-attachments/assets/0942b61f-f0b8-4326-ae7c-1c5f27540295" />
 
 📋 Menu & Services
 
 Food menu with categories
+<img width="452" height="539" alt="image" src="https://github.com/user-attachments/assets/142566bf-e17a-4b2a-8ae8-c0d5f2bc90a2" />
 
 Drinks menu integration
+<img width="414" height="531" alt="image" src="https://github.com/user-attachments/assets/6bb71a74-d33e-426a-aae0-067d66ade61c" />
 
 Service listings (salon, pedicure, boat rides, etc.)
+<img width="416" height="258" alt="image" src="https://github.com/user-attachments/assets/777fb7a2-7339-4397-a629-545713796d2d" />
 
 Item images, prices, and descriptions
-
-📸 Screenshot: Menu & Services
+<img width="423" height="689" alt="image" src="https://github.com/user-attachments/assets/16217a3a-477a-4f86-a552-ead2deccf1c6" />
 
 🛒 Cart & Checkout
 
