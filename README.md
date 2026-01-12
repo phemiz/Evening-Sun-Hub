@@ -15,7 +15,10 @@ This application brings customers, staff, and management together in one ecosyst
 Add screenshots in these sections for better visual understanding:
 
 🖼️ Landing Page / Home Screen
+
+
 <img width="536" height="729" alt="image" src="https://github.com/user-attachments/assets/7d7251a3-1fc6-4bed-973e-adcb8d99ba44" />
+
 
 🖼️ Customer App – Menu & Booking
 <img width="461" height="555" alt="image" src="https://github.com/user-attachments/assets/318790ad-cb9c-4c58-a246-7e3473436304" />
