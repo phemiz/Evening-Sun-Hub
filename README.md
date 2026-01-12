@@ -1,5 +1,5 @@
 <div align="center">
-<img width="1200" height="475" alt="image" src="https://github.com/user-attachments/assets/0c657a7c-fb31-4e3e-8312-e8906a2aad09" />
+<img width="529" height="426" alt="image" src="https://github.com/user-attachments/assets/9a95dd1f-dfef-4a02-a327-ab5396dd3374" />
 </div>
 
 Evening Sun Hub
